@@ -91,6 +91,9 @@ class SACAgent:
         self.discriminator_opt = Adam(self.discriminator.parameters(), lr=lr)
         self.his_discriminator_opt = Adam(self.his_discriminator.parameters(), lr=lr)
 
+
+        self.beta = [i / self.k for i in range(self.k + 1)]
+
     def choose_action(self, states):
         states = np.expand_dims(states, axis=0)
         states = from_numpy(states).float().to(self.device)
@@ -176,6 +179,33 @@ class SACAgent:
 
         return states, zs, dones, actions, next_states, state_with_history, his_masks
 
+
+    def discriminator_loss(self, his_masks: torch.Tensor, logits, zs):
+        # his_masks: B, 1
+        # logits: B, n_skills
+        # zs: B, 1
+        beta_j = torch.tensor(self.beta).to(self.device)
+
+        beta_j = beta_j.gather(0, his_masks.long().squeeze(-1) - 1).reshape(-1, 1)  # B, 1
+        one_hot_zs = torch.zeros_like(logits).scatter_(1, zs, 1)  # B, n_skills
+        y_j = (1 - beta_j) / self.n_skills + beta_j * one_hot_zs
+
+        return self.cross_ent_loss(logits, y_j)
+
+    def monotonic_confidence_regularization(self, his_masks: torch.Tensor, last_logits, second_last_logits, zs):
+        # calc entropy of the logits
+        last_logits_probs = torch.softmax(last_logits, dim=-1)  # B, n_skills
+        last_entropy = -(last_logits_probs * torch.log(last_logits_probs + 1e-6)).sum(dim=-1, keepdim=True) # B, 1
+        second_last_logits_probs = torch.softmax(second_last_logits, dim=-1)    # B, n_skills
+        second_last_entropy = -(second_last_logits_probs * torch.log(second_last_logits_probs + 1e-6)).sum(dim=-1, keepdim=True)    # B, 1
+
+        monotonic_loss = (last_entropy - second_last_entropy).mean() # B, 1
+
+        if monotonic_loss < 0:
+            return 0
+        else:
+            return monotonic_loss   # minimize the increase of entropy, which is equivalent to maximizing the decrease of entropy
+
     def train(self):
         if len(self.memory) < self.batch_size:
             return None
@@ -207,10 +237,15 @@ class SACAgent:
 
             logits = self.his_discriminator(state_with_history, his_masks)
 
+            last_logits = logits[:, -1, ...]
 
             p_z = p_z.gather(-1, zs)
-            logq_z_ns = log_softmax(logits, dim=-1)
-            rewards = logq_z_ns.gather(-1, zs).detach() - torch.log(p_z + 1e-6)
+            logq_z_ns = log_softmax(last_logits, dim=-1)
+            logq_z_ns = logq_z_ns.gather(-1, zs).detach()
+            second_last_logq_z_ns = log_softmax(logits[:, -2, ...], dim=-1)
+            second_last_logq_z_ns = second_last_logq_z_ns.gather(-1, zs).detach()
+
+            rewards = (logq_z_ns - torch.log(p_z + 1e-6))*0.05 + (logq_z_ns - second_last_logq_z_ns)
 
             # Calculating the Q-Value target
             with torch.no_grad():
@@ -224,10 +259,14 @@ class SACAgent:
             q2_loss = self.mse_loss(q2, target_q)
 
             policy_loss = (self.alpha * log_probs - q).mean()
-            logits = self.discriminator(
-                torch.split(states, [self.n_states, self.n_skills], dim=-1)[0]
-            )
-            discriminator_loss = self.cross_ent_loss(logits, zs.squeeze(-1))
+
+
+            # Calculate the discriminator loss, using the history discriminator
+            logits = self.his_discriminator(state_with_history, his_masks-1)    # to exclude the state s+1, calc up to s+k instead of s+k+1
+            last_logits = logits[:, -1, ...]
+            second_last_logits = logits[:, -2, ...]
+
+            discriminator_loss = self.discriminator_loss(his_masks, last_logits, zs) + 0.01 * self.monotonic_confidence_regularization(his_masks, last_logits, second_last_logits, zs)
 
             self.policy_opt.zero_grad()
             policy_loss.backward()

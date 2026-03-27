@@ -13,6 +13,7 @@ dependencies = [
     "torch>=2.10.0",
     "wandb>=0.25.1",
     "tensorboard>=2.20.0",
+    "torch-tb-profiler>=0.4.3",
 ]
 
 [[tool.uv.index]]

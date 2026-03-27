@@ -102,7 +102,10 @@ class HistoryDiscriminator(nn.Module, ABC):
 
         batch_indices = torch.arange(x.size(0), device=x.device)
         last_valid_indices = valid_lengths - 1  # the index of the last valid entry for each history
-        x = x[batch_indices, last_valid_indices]
+        second_last_indices = (valid_lengths - 2).clamp(min=0)  # clamp to avoid negative indices
+        x_last = x[batch_indices, last_valid_indices]
+        x_second_last = x[batch_indices, second_last_indices]
+        x = torch.stack([x_last, x_second_last], dim=1)  # (batch_size, 2, n_hidden_filters)
         x = F.relu(self.hidden2(x))
         logits = self.q(x)
         return logits
