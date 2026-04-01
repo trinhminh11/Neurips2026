@@ -250,7 +250,9 @@ That is a defensible conceptual shift.
 
 This is the main novelty risk.
 
-CIC already maximizes mutual information between skills and state-transitions using contrastive learning. So if the proposal is written as
+CIC already maximizes mutual information between skills and state-transitions using contrastive learning. In its basic form, the contrastive view is much closer to a one-step signal such as $(S_t, S_{t+1})$. Your proposal is stronger when it is written around a **multi-step conditional future segment** $(S_{t+1}, \dots, S_{t+k})$ with $k > 1$.
+
+So if the proposal is written as
 
 > "Use InfoNCE to maximize MI between skill and transition,"
 
@@ -258,12 +260,16 @@ then it will likely look too close to prior work.
 
 To stay novel, the key message should be:
 
-- not generic transition-skill contrast,
+- not generic one-step transition-skill contrast,
 - but **conditional local trajectory identifiability**,
 - with `S_t` as context,
+- with a future window `(S_{t+1}, ..., S_{t+k})` rather than only `(S_t, S_{t+1})`,
 - and with an information-gain / decomposition view over trajectory prefixes.
 
-That angle is more distinct.
+That angle is more distinct. Put differently:
+
+- if `k = 1`, the comparison to CIC becomes much tighter;
+- if `k > 1` and the method really exploits multi-step prediction or prefix-wise information gain, the proposal is easier to defend as a different idea.
 
 ### Compared with DUSDi
 
