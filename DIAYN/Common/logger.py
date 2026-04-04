@@ -27,7 +27,7 @@ class Logger:
 
     @staticmethod
     def _create_wights_folder(dir):
-        Path("Checkpoints", dir).mkdir(parents=True, exist_ok=True)
+        Path("checkpoints", dir).mkdir(parents=True, exist_ok=True)
 
     def _log_params(self):
         with SummaryWriter("Logs/" + self.log_dir) as writer:
@@ -105,10 +105,10 @@ class Logger:
                     "max_episode_reward": self.max_episode_reward,
                     "running_logq_zs": self.running_logq_zs
                     },
-                   "Checkpoints/" + self.log_dir + "/params.pth")
+                   "checkpoints/" + self.log_dir + "/params.pth")
 
     def load_weights(self):
-        model_dir = glob.glob("Checkpoints/" + self.config["env_name"][:-3] + "/")
+        model_dir = glob.glob("checkpoints/" + self.config["env_name"][:-3] + "/")
         model_dir.sort()
         checkpoint = torch.load(model_dir[-1] + "/params.pth")
         self.log_dir = model_dir[-1].split(os.sep)[-1]

@@ -10,7 +10,7 @@ wheels/
 .venv
 
 
-Checkpoints/
+checkpoints/
 Logs/
 TEMP/
 common_net/
