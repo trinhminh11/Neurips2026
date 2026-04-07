@@ -20,9 +20,9 @@ class EnvConfig:
 class SkillConfig:
     n_skills: int = 50
     skill_embed_dim: int = 64
-    traj_len: int = 16  # k: trajectory window length
+    traj_len: int = 8  # k: trajectory window length
     reward_type: RewardType = "surrogate"
-    n_negatives: int = 16  # K for variational InfoNCE
+    n_negatives: int = 16  # K for variational InfoNCE, not used for now
 
 
 @dataclass
@@ -39,7 +39,7 @@ class SACConfig:
     reward_scale: float = 1.0
     mem_size: int = 1_000_000
     target_update_interval: int = 2
-    seed: int = 123
+    seed: int = 11042004
     learning_alpha: bool = True
 
 

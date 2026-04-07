@@ -10,6 +10,7 @@ from buffer import ReplayBuffer
 from config import TrainConfig, get_train_config
 from logger import RunLogger
 from wrapper import DMControlHopperWrapper, SkillWrapper
+from tqdm import tqdm
 
 
 class SkillTracker:
@@ -89,7 +90,7 @@ def train(cfg: TrainConfig):
     train_steps = 0
     best_mean_return = -float("inf")
 
-    for episode in range(1, cfg.env.max_n_episodes + 1):
+    for episode in tqdm(range(1, cfg.env.max_n_episodes + 1)):
         obs, info = env.reset()
         ep_return = 0.0
         ep_length = 0

@@ -17,9 +17,9 @@ from models import (
 from torch import Tensor, from_numpy
 from torch.optim import Adam
 
-log_state_z_coef = 1.0
-log_state_mean_coef = 1.0
-p_z_coef = 1.0
+log_state_z_coef = 0.5
+log_state_mean_coef = 0.5
+p_z_coef = 0.5
 
 
 class Agent:
